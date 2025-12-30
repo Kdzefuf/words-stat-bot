@@ -49,7 +49,7 @@ bot.command('help', (ctx) => {
 
 *Основные команды:*
 
-• \`/stat слово\`  
+• \`/stat [слово|фраза] \`  
   Сколько раз *«слово»* встречалось в чате.
 
 • \`/stat @username слово\`  
@@ -80,9 +80,10 @@ bot.command('help', (ctx) => {
 bot.command('stat', async (ctx) => {
     const args = parseCommandArgs(ctx.message.text);
     if (args.length === 0) {
-        return ctx.reply('📌 Используйте:\n`/stat слово`\n`/stat @username слово`', {
-            parse_mode: 'Markdown',
-        });
+        return ctx.reply(
+            '📌 Используйте:\n`/stat слово`\n`/stat @username слово`\n`/stat фраза из нескольких слов`',
+            { parse_mode: 'Markdown' }
+        );
     }
 
     const { username, words } = extractUsernameAndRest(args);
@@ -92,17 +93,30 @@ bot.command('stat', async (ctx) => {
     }
 
     const normQuery = normalizeLayout(query);
-    let sql = `
-    SELECT COUNT(*) AS count
-    FROM chat_messages m,
-         regexp_split_to_table(m.normalized_text, '\\s+') AS word
-    WHERE m.chat_id = $1
-      AND word LIKE $2
-  `;
-    let params = [ctx.chat.id, `${normQuery}%`];
+    let sql, params;
+
+    if (words.length > 1) {
+        sql = `
+      SELECT COUNT(*) AS count
+      FROM chat_messages m
+      WHERE m.chat_id = $1
+        AND m.normalized_text LIKE $2
+    `;
+        params = [ctx.chat.id, `%${escapeLike(normQuery)}%`];
+
+    } else {
+        sql = `
+      SELECT COUNT(*) AS count
+      FROM chat_messages m,
+           regexp_split_to_table(m.normalized_text, '\\s+') AS word
+      WHERE m.chat_id = $1
+        AND word LIKE $2
+    `;
+        params = [ctx.chat.id, `${normQuery}%`];
+    }
 
     if (username) {
-        sql += ` AND (m.username = $3 OR LOWER(m.author_name) = $3)`;
+        sql += ` AND (m.username = $${params.length + 1} OR LOWER(m.author_name) = $${params.length + 1})`;
         params.push(username.toLowerCase());
     }
 
@@ -110,9 +124,16 @@ bot.command('stat', async (ctx) => {
         const res = await pool.query(sql, params);
         const n = parseInt(res.rows[0].count, 10);
         const target = username ? `у @${username}` : 'в чате';
-        ctx.reply(`🔍 «${query}» найдено *${n}* раз(а) ${target}.`, {
-            parse_mode: 'Markdown',
-        });
+
+        if (words.length > 1) {
+            ctx.reply(`🔍 Фраза «${query}» найдена *${n}* раз(а) ${target}.`, {
+                parse_mode: 'Markdown',
+            });
+        } else {
+            ctx.reply(`🔍 Слов, начинающихся с «${query}»: *${n}* раз(а) ${target}.`, {
+                parse_mode: 'Markdown',
+            });
+        }
     } catch (e) {
         console.error('/stat error:', e);
         ctx.reply('⚠️ Ошибка при подсчёте.');
