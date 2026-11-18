@@ -52,7 +52,7 @@ bot.command('help', (ctx) => {
 • \`/stat [слово|фраза] \`  
   Сколько раз *«слово»* встречалось в чате.
 
-• \`/stat @username слово\`  
+• \`/stat @username [слово|фраза]\`  
   Сколько раз *пользователь* написал это слово.
 
 • \`/top [week|month|year|all]\`  
@@ -130,7 +130,7 @@ bot.command('stat', async (ctx) => {
                 parse_mode: 'Markdown',
             });
         } else {
-            ctx.reply(`🔍 Слов, начинающихся с «${query}»: *${n}* раз(а) ${target}.`, {
+            ctx.reply(`🔍 Слово «${query}» встречается: *${n}* раз(а) ${target}.`, {
                 parse_mode: 'Markdown',
             });
         }

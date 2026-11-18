@@ -8,10 +8,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "*Статистика чата* — бот для анализа слов в переписке",
   "dependencies": {
     "dotenv": "^17.2.3",
     "pg": "^8.16.3",
     "telegraf": "^4.16.3"
-  }
+  },
+  "devDependencies": {}
 }
